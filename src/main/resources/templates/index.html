@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+    <h1>테이블 컬럼 -> 카멜 표기법 변환기</h1>
+    <form action="/runquery" method="post" >
+        <li><input type="submit" value="실행"></li>
+        <ul>
+            <li>driver-class-name : <input name="dbDriver" type="text" th:value="${dbStatus.getDbDriver()}" /></li>
+            ex) MariaDB : org.mariadb.jdbc.Driver</br>
+            Oracle  : oracle.jdbc.driver.OracleDriver
+            <li>url : <input name="dbJdbcUrl" type="text" th:value="${dbStatus.getDbJdbcUrl()}"/></li>
+            ex) MariaDB : jdbc:mariadb://서버IP:서버PORT/DB명</br>
+            Oracle  : jdbc:oracle:thin:@서버IP:서버PORT/SID명
+            <li>username : <input name="dbUserName" type="text" th:value="${dbStatus.getDbUserName()}"/></li>
+            <li>password : <input name="dbPassword" type="text" th:value="${dbStatus.getDbPassword()}"/></li>
+            <br/>
+            <label for="cd1"><input type="radio" id="cd1" name="useType" value="vo" th:checked="${dbStatus.getUseType() eq 'vo'}"><span>VO</span></label>
+            <label for="cd2"><input type="radio" id="cd2" name="useType" value="hi" th:checked="${dbStatus.getUseType() eq 'hi'}"><span>Hibernate</span></label>
+            <label for="cd2"><input type="radio" id="cd3" name="useType" value="mybatis" th:checked="${dbStatus.getUseType() eq 'mybatis'}"><span>MyBatis</span></label>
+            <li>table : <input name="dbTable" type="text" th:value="${dbStatus.getDbTable()}"/></li>
+        </ul>
+    </form>
+</body>
+</html>
