@@ -14,9 +14,8 @@ import java.util.*;
 public class QueryService {
 
     public DbStatus initDbStatus(){
-        String USE_TYPE = "vo";
         return DbStatus.builder()
-                .useType(USE_TYPE)
+                .useType("vo")
                 .build();
     }
 
