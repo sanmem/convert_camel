@@ -8,16 +8,13 @@ import org.springframework.stereotype.Service;
 import org.thymeleaf.util.StringUtils;
 
 import java.sql.*;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Locale;
+import java.util.*;
 
 @Service
 public class QueryService {
 
-    private String USE_TYPE = "vo";
-    
     public DbStatus initDbStatus(){
+        String USE_TYPE = "vo";
         return DbStatus.builder()
                 .useType(USE_TYPE)
                 .build();
@@ -30,7 +27,7 @@ public class QueryService {
 
         String sql = "select * from "+dbStatus.getDbTable();
 
-        ArrayList<RsMetaData> camelCaseList = new ArrayList<RsMetaData>();
+        ArrayList<RsMetaData> camelCaseList = new ArrayList<>();
 
         try {
             conn = new DbConnectionPool().getConnection(dbStatus);
@@ -48,9 +45,9 @@ public class QueryService {
             ps.close();
             conn.close();
         } catch (SQLException e) {
-            return new ArrayList<String>(Collections.singleton("테이블명을 확인해라!!!"));
+            return new ArrayList<>(Collections.singleton("테이블명을 확인해라!!!"));
         } catch (Exception ex1){
-            return new ArrayList<String>(Collections.singleton("DB정보 확인해라!!!"));
+            return new ArrayList<>(Collections.singleton("DB정보 확인해라!!!"));
         }
         return createCase(camelCaseList, dbStatus.getUseType());
     }
@@ -61,7 +58,7 @@ public class QueryService {
             camelList.add("<resultMap id=\"\" class=\"\">");
         }
 
-        camelCaseList.stream().forEach(rsMetaData -> {
+        camelCaseList.forEach(rsMetaData -> {
             switch (useType){
                 case "vo":
                     camelList.add(createCamelName(rsMetaData));
@@ -104,26 +101,29 @@ public class QueryService {
     }
 
     private String createCamelName(RsMetaData rsMetaData){
-        String base = "private %s %s;";
-        String resultStr = "";
-        switch (rsMetaData.getColType()){
-            case "NUMBER" :
-            case "BIGINT" :
-                resultStr = String.format(base, "Long", rsMetaData.getCamelName());
-                break;
-            case "INTEGER" :
-                resultStr = String.format(base, "int", rsMetaData.getCamelName());
-                break;
-            default:
-                resultStr = String.format(base, "String", rsMetaData.getCamelName());
-                break;
-        }
-        return resultStr;
+//        String base = "private %s %s;";
+//        String resultStr = "";
+//        switch (rsMetaData.getColType()){
+//            case "NUMBER" :
+//            case "BIGINT" :
+//                resultStr = String.format(base, "Long", rsMetaData.getCamelName());
+//                break;
+//            case "INTEGER" :
+//                resultStr = String.format(base, "int", rsMetaData.getCamelName());
+//                break;
+//            default:
+//                resultStr = String.format(base, "String", rsMetaData.getCamelName());
+//                break;
+//        }
+//        return resultStr;
 
+        return new CamelFactory(rsMetaData).createValue();
     }
+
 
     private String createMybatisName(RsMetaData rsMetaData) {
         String base = "<result property=\"%s\" column=\"%s\" />";
         return String.format(base, rsMetaData.getCamelName(), rsMetaData.getColName());
     }
+
 }
