@@ -22,9 +22,8 @@ public class CamelFactory {
     }
 
     public String createValue(){
-        Function<RsMetaData, String> rsMetaDataStringFunction = map.get(rsMetaData.getColType());
         try {
-            return rsMetaDataStringFunction.apply(rsMetaData);
+            return map.get(rsMetaData.getColType()).apply(rsMetaData);
         }catch (NullPointerException e){
             return String.format(BASE, "String", rsMetaData.getCamelName());
         }
