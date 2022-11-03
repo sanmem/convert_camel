@@ -53,9 +53,6 @@ public class QueryService {
 
     private ArrayList<String> createCase(ArrayList<RsMetaData> camelCaseList, String useType) {
         ArrayList<String> camelList = new ArrayList<>();
-        if ( StringUtils.equals(useType,"mybatis")){
-            camelList.add("<resultMap id=\"\" class=\"\">");
-        }
 
         camelCaseList.forEach(rsMetaData -> {
             switch (useType){
@@ -77,6 +74,7 @@ public class QueryService {
         });
 
         if ( StringUtils.equals(useType,"mybatis")){
+            camelList.add(0,"<resultMap id=\"\" class=\"\">");
             camelList.add("</resultMap>");
         }
         return camelList;
