@@ -55,29 +55,37 @@ public class QueryService {
         ArrayList<String> camelList = new ArrayList<>();
 
         camelCaseList.forEach(rsMetaData -> {
-            switch (useType){
-                case "vo":
-                    camelList.add(createCamelName(rsMetaData));
-                    camelList.add("");
-                    break;
-                case "hibernate":
-                    camelList.add(createHivernateName(rsMetaData));
-                    camelList.add(createCamelName(rsMetaData));
-                    camelList.add("");
-                    break;
-                case "mybatis":
-                    camelList.add(createMybatisName(rsMetaData));
-                    break;
-                default:
-                    break;
-            }
+            makeCamelCase(useType, camelList, rsMetaData);
         });
 
         if ( StringUtils.equals(useType,"mybatis")){
-            camelList.add(0,"<resultMap id=\"\" class=\"\">");
-            camelList.add("</resultMap>");
+            mybatisType(camelList);
         }
         return camelList;
+    }
+
+    private void makeCamelCase(String useType, ArrayList<String> camelList, RsMetaData rsMetaData) {
+        switch (useType){
+            case "vo":
+                camelList.add(createCamelName(rsMetaData));
+                camelList.add("");
+                break;
+            case "hibernate":
+                camelList.add(createHivernateName(rsMetaData));
+                camelList.add(createCamelName(rsMetaData));
+                camelList.add("");
+                break;
+            case "mybatis":
+                camelList.add(createMybatisName(rsMetaData));
+                break;
+            default:
+                break;
+        }
+    }
+
+    private void mybatisType(ArrayList<String> camelList) {
+        camelList.add(0,"<resultMap id=\"\" class=\"\">");
+        camelList.add("</resultMap>");
     }
 
     private static RsMetaData getRsMetaData(ResultSetMetaData resultSetMetaData, int i){
