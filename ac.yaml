@@ -1,0 +1,340 @@
+blueprint:
+  # 1.0: Init
+  # 1.1: var day_or_night fix
+  # 1.2: resume bug fix
+  name: 담다-에어컨 자동화
+  description: 낮/밤 시간, 목표 설정온도와 공차를 설정하여 에어컨을 자동으로 관리해줍니다.
+  domain: automation
+  input:
+    climate_device:
+      name: 에어컨
+      description: 자동화에 사용할 에어컨(구성요소만 선택하세요)
+      selector:
+        target:
+          entity:
+            domain: climate
+    indoor_temperature:
+      name: 현재온도
+      description: 자동화에 사용할 현재온도 센서
+      selector:
+        entity:
+          domain: sensor
+          device_class: temperature
+    indoor_humidity:
+      name: 현재습도
+      description: 자동화에 사용할 현재습도 센서
+      selector:
+        entity:
+          domain: sensor
+          device_class: humidity
+    temperature_offset:
+      name: 목표온도 공차
+      description: +- 온도공차(설정온도 27, 공차 1이면 26~28도 유지합니다)
+      default: 0.5
+      selector:
+        number:
+          min: 0
+          max: 2
+          step: 0.05
+    day_start:
+      name: 낮
+      description: 낮 시작 시간
+      selector:
+        time:
+      default: "07:00:00"
+    day_cool_mode:
+      name: 낮 냉방모드
+      description: 낮 - 냉방모드 시 에어컨의 설정모드
+      selector:
+        select:
+          options:
+            - 자동
+            - 냉방
+            - 제습
+      default: 자동
+    day_idle_mode:
+      name: 낮 대기모드
+      description: 낮 - 대기모드 시 에어컨의 설정모드
+      selector:
+        select:
+          options:
+            - 자동
+            - 냉방
+            - 제습
+            - 송풍
+      default: 자동
+    day_target_temp:
+      name: 낮 목표온도
+      description: 낮 - 해당 시간동안 유지할 목표온도
+      default: 27
+      selector:
+        number:
+          min: 22
+          max: 30
+          step: 0.1
+          unit_of_measurement: "°C"
+    day_target_cool:
+      name: 낮 설정온도(냉방)
+      description: 낮 - 냉방모드 시 에어컨의 설정온도
+      default: 28
+      selector:
+        number:
+          min: 22
+          max: 30
+          step: 1
+          unit_of_measurement: "°C"
+    day_target_idle:
+      name: 낮 설정온도(대기)
+      description: 낮 - 대기모드 시 에어컨의 설정온도(설정모드가 송풍일 경우 무시합니다.)
+      default: 29
+      selector:
+        number:
+          min: 22
+          max: 30
+          step: 1
+          unit_of_measurement: "°C"
+    night_start:
+      name: 밤
+      description: 밤 시작 시간
+      selector:
+        time:
+      default: "21:00:00"
+    night_cool_mode:
+      name: 밤 냉방모드
+      description: 밤 - 냉방모드 시 에어컨의 설정모드
+      selector:
+        select:
+          options:
+            - 자동
+            - 냉방
+            - 제습
+      default: 자동
+    night_idle_mode:
+      name: 밤 대기모드
+      description: 밤 - 대기모드 시 에어컨의 설정모드
+      selector:
+        select:
+          options:
+            - 자동
+            - 냉방
+            - 제습
+            - 송풍
+      default: 자동
+    night_target_temp:
+      name: 밤 목표온도
+      description: 밤 - 해당시간 동안 유지할 목표온도
+      default: 29
+      selector:
+        number:
+          min: 22
+          max: 30
+          step: 0.1
+          unit_of_measurement: "°C"
+    night_target_cool:
+      name: 밤 설정온도(냉방)
+      description: 밤 - 냉방모드 시 에어컨의 설정온도
+      default: 29
+      selector:
+        number:
+          min: 22
+          max: 30
+          step: 1
+          unit_of_measurement: "°C"
+    night_target_idle:
+      name: 밤 설정온도(대기)
+      description: 밤 - 대기모드 시 에어컨의 설정온도(설정모드가 송풍일 경우 무시합니다)
+      default: 30
+      selector:
+        number:
+          min: 22
+          max: 30
+          step: 1
+          unit_of_measurement: "°C"
+    door_sensor:
+      name: 도어센서
+      description: 자동화에 사용할 도어센서(문이 열려있으면 에어컨을 대기상태로 바꿉니다)
+      selector:
+        entity:
+          domain: binary_sensor
+          device_class: opening
+    pause_minutes:
+      name: 일시정지 설정시간(분)
+      description: 설정시간(분) 동안 문이 열려있으면 에어컨을 대기상태로 바꿉니다
+      default: 
+        hours: 0
+        minutes: 2
+        seconds: 0
+      selector:
+        duration:
+    resume_minutes:
+      name: 재시작 설정시간(분)
+      description: 설정시간(분) 동안 문이 닫혀있으면 에어컨을 자동으로 바꿉니다
+      default: 
+        hours: 0
+        minutes: 2
+        seconds: 0
+      selector:
+        duration:
+
+variables:
+  climate_device_input: !input climate_device
+  climate_device: >-
+    {%- if climate_device_input.entity_id is string -%}
+      {%- set climate_list = [climate_device_input.entity_id] -%}
+    {%- else -%}
+      {%- set climate_list = climate_device_input.entity_id -%}
+    {%- endif -%}
+    {{ climate_list }}
+  is_climate_off: "{{ expand(climate_device)|selectattr('state', 'eq', 'off')|map(attribute='entity_id')|list|length == climate_device|length }}"
+  is_climate_auto: "{{ expand(climate_device)|selectattr('state', 'eq', 'auto')|map(attribute='entity_id')|list|length == climate_device|length }}"
+  is_climate_cool: "{{ expand(climate_device)|selectattr('state', 'eq', 'cool')|map(attribute='entity_id')|list|length == climate_device|length }}"
+  is_climate_dry: "{{ expand(climate_device)|selectattr('state', 'eq', 'dry')|map(attribute='entity_id')|list|length == climate_device|length }}"
+  is_climate_fan: "{{ expand(climate_device)|selectattr('state', 'eq', 'fan_only')|map(attribute='entity_id')|list|length == climate_device|length }}"
+  day_start: !input day_start
+  night_start: !input night_start
+  day_or_night: >-
+    {%- set time_now = now()|as_timestamp -%}
+    {%- set time_day = today_at(day_start)|as_timestamp -%}
+    {%- set time_night = today_at(night_start)|as_timestamp -%}
+    {%- if time_day < time_night and (time_now < time_day or time_now > time_night) -%}night
+    {%- elif time_day < time_night and (time_now > time_day and time_now < time_night) -%}day
+    {%- elif time_day > time_night and (time_now > time_day or time_now < time_night) -%}day
+    {%- elif time_day > time_night and (time_now < time_day and time_now > time_night) -%}night
+    {%- endif -%}
+  mode_day_cool: !input day_cool_mode
+  mode_day_idle: !input day_idle_mode
+  mode_night_cool: !input night_cool_mode
+  mode_night_idle: !input night_idle_mode
+  humi_now: !input indoor_humidity
+  temp_offset: !input temperature_offset
+  temp_now: !input indoor_temperature
+  temp_day_target: !input day_target_temp
+  temp_day_cool: !input day_target_cool
+  temp_day_idle: !input day_target_idle
+  temp_night_target: !input night_target_temp
+  temp_night_cool: !input night_target_cool
+  temp_night_idle: !input night_target_idle
+  is_day_cool: "{{ states(temp_now)|float > (temp_day_target|float + temp_offset|float)|float }}"
+  is_day_idle: "{{ states(temp_now)|float < (temp_day_target|float - temp_offset|float)|float }}"
+  is_night_cool: "{{ states(temp_now)|float > (temp_night_target|float + temp_offset|float)|float }}"
+  is_night_idle: "{{ states(temp_now)|float < (temp_night_target|float - temp_offset|float)|float }}"
+  target_mode: >-
+    {%- set target = 'off' -%}
+    {%- if day_or_night == 'day' -%}
+      {%- if is_day_idle -%}
+        {%- set target = mode_day_idle -%}
+      {%- elif is_day_cool -%}
+        {%- set target = mode_day_cool -%}
+      {%- endif -%}
+    {%- else -%}
+      {%- if is_night_idle -%}
+        {%- set target = mode_night_idle -%}
+      {%- elif is_night_cool -%}
+        {%- set target = mode_night_cool -%}
+      {%- endif -%}
+    {%- endif -%}
+    {%- set mode_map = {'자동': 'auto','냉방': 'cool','제습': 'dry','송풍': 'fan_only', 'off': ''} -%}
+    {{ mode_map[target] }}
+  set_modes: >-
+    {%- set climate_select_mode = namespace(entities=[]) -%}
+    {%- if target_mode != '' -%}
+      {%- for i_entity in climate_device -%}
+        {%- if states(i_entity) != target_mode -%}
+          {%- set climate_select_mode.entities = climate_select_mode.entities + [i_entity] -%}
+        {%- endif -%}
+      {%- endfor -%}
+    {%- endif -%}
+    {{ climate_select_mode.entities }}
+  target_temperature: >-
+    {%- set target = 'off' -%}
+    {%- if day_or_night == 'day' -%}
+      {%- if is_day_idle -%}
+        {%- set target = temp_day_idle -%}
+      {%- elif is_day_cool -%}
+        {%- set target = temp_day_cool -%}
+      {%- endif -%}
+    {%- else -%}
+      {%- if is_night_idle -%}
+        {%- set target = temp_night_idle -%}
+      {%- elif is_night_cool -%}
+        {%- set target = temp_night_cool -%}
+      {%- endif -%}
+    {%- endif -%}
+    {{ target }}
+  set_target_temperature: >-
+    {%- set climate_select_temperature = namespace(entities=[]) -%}
+    {%- if target_temperature != 'off' and target_mode != 'fan_only' -%}
+      {%- for i_entity in climate_device -%}
+        {%- set device_target = state_attr(i_entity,'temperature') -%}
+        {%- if device_target != target_temperature -%}
+          {%- set climate_select_temperature.entities = climate_select_temperature.entities + [i_entity] -%}
+        {%- endif -%}
+      {%- endfor -%}
+    {%- endif -%}
+    {{ climate_select_temperature.entities }}
+trigger:
+- platform: time_pattern
+  seconds: /10
+- platform: state
+  id: 재시작
+  entity_id: !input door_sensor
+  from: 'on'
+  to: 'off'
+  for: !input resume_minutes
+- platform: state
+  id: 일시정지
+  entity_id: !input door_sensor
+  from: 'off'
+  to: 'on'
+  for: !input pause_minutes
+action:
+- choose:
+  - conditions:
+      - condition: trigger
+        id: 재시작
+    sequence:
+      - service: climate.set_hvac_mode
+        data:
+          hvac_mode: 'auto'
+        target: !input climate_device
+  - conditions:
+      - condition: trigger
+        id: 일시정지
+    sequence:
+      - service: climate.set_hvac_mode
+        data:
+          hvac_mode: 'fan_only'
+        target: !input climate_device
+  default:
+    - choose:
+        - conditions:
+            - condition: state
+              entity_id: !input door_sensor
+              state: 'off'
+              for: !input resume_minutes
+          sequence:
+            - choose:
+              - conditions: "{{ set_modes|length > 0 }}"
+                sequence:
+                  - service: climate.set_hvac_mode
+                    data:
+                      hvac_mode: "{{ target_mode }}"
+                    target: !input climate_device
+            - choose:
+              - conditions: "{{ set_modes|length == 0 and set_target_temperature|length > 0 }}"
+                sequence:
+                  - service: climate.set_temperature
+                    data:
+                      temperature: "{{ target_temperature }}"
+                    target: !input climate_device
+            - choose:
+              - conditions: "{{ set_modes|length > 0 or set_target_temperature|length > 0 }}"
+                sequence:
+                - service: system_log.write
+                  data:
+                    message: >-
+                      모드 {{ target_mode }} 변경: {{ set_modes }}\n
+                      온도 {{ target_temperature }} 변경: {{ set_target_temperature }} 
+                    level: info
+                    logger: blueprint.damda_auto_ac
+mode: single
